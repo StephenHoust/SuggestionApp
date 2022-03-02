@@ -1,4 +1,7 @@
-﻿namespace SuggestionAppUI;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace SuggestionAppUI;
 
 public static class RegisterServices
 {
@@ -6,5 +9,6 @@ public static class RegisterServices
     {
         builder.Services.AddRazorPages();
         builder.Services.AddServerSideBlazor();
+        builder.Services.AddMemoryCache();
     }
 }

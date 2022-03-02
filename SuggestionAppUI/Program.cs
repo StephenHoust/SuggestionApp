@@ -1,7 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.Hosting;
 using SuggestionAppUI;
 
 var builder = WebApplication.CreateBuilder(args);

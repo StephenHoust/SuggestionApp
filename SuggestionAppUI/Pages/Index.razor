@@ -13,7 +13,7 @@
 </div>
 
 <div>
-    <div>@suggestions?.Count Suggestions</div>
+    <div>@_suggestions?.Count Suggestions</div>
     <div>
         <button @onclick="() => OrderByNew(true)">New</button>
         <button @onclick="() => OrderByNew(false)">Popular</button>
@@ -26,9 +26,9 @@
 
 <div>
     <div>
-        @if (suggestions is not null)
+        @if (_suggestions is not null)
         {
-            <Virtualize Items="@suggestions" Context="s" OverscanCount="10">
+            <Virtualize Items="@_suggestions" Context="s" OverscanCount="10">
                 <div>
                     <div>
                         <div>@GetUpvoteTopText(s)</div>
@@ -55,13 +55,13 @@
         }
     </div>
     <div>
-        @if (categories is not null)
+        @if (_categories is not null)
         {
             <div>
                 <div>
                     <span>Category</span>
                     <div @onclick="() => OnCategoryClick()">All</div>
-                    @foreach (var c in categories)
+                    @foreach (var c in _categories)
                     {
                         <div @onclick="() => OnCategoryClick(c.CategoryName)">
                             @c.CategoryName
@@ -70,12 +70,12 @@
                 </div>
             </div>
         }
-        @if (statuses is not null)
+        @if (_statuses is not null)
         {
             <div>
                 <span>Status</span>
                 <div @onclick="() => OnStatusClick()">All</div>
-                @foreach (var s in statuses)
+                @foreach (var s in _statuses)
                 {
                     <div @onclick="() => OnCategoryClick(s.StatusName)">
                         @s.StatusName
@@ -87,19 +87,19 @@
 </div>
 
 @code {
-    private List<SuggestionModel> suggestions;
-    private List<CategoryModel> categories;
-    private List<StatusModel> statuses;
+    private List<SuggestionModel> _suggestions;
+    private List<CategoryModel> _categories;
+    private List<StatusModel> _statuses;
 
-    private string selectedCategory = "All";
-    private string selectedStatus = "All";
-    private string searchText = "";
-    bool isSortedByNew = true;
+    private string _selectedCategory = "All";
+    private string _selectedStatus = "All";
+    private string _searchText = "";
+    private bool _isSortedByNew = true;
 
     protected override async Task OnInitializedAsync()
     {
-        categories = await CategoryData.GetAllCategories();
-        statuses = await StatusData.GetAllStatuses();
+        _categories = await CategoryData.GetAllCategories();
+        _statuses = await StatusData.GetAllStatuses();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -114,88 +114,89 @@
 
     private async Task LoadFilterState()
     {
-        var stringResults = await SessionStorage.GetAsync<string>(nameof(selectedCategory));
-        selectedCategory = stringResults.Success
+        var stringResults = await SessionStorage.GetAsync<string>(nameof(_selectedCategory));
+        _selectedCategory = stringResults.Success
             ? stringResults.Value
             : "All";
 
-        stringResults = await SessionStorage.GetAsync<string>(nameof(selectedStatus));
-        selectedStatus = stringResults.Success
+        stringResults = await SessionStorage.GetAsync<string>(nameof(_selectedStatus));
+        _selectedStatus = stringResults.Success
             ? stringResults.Value
             : "All";
 
-        stringResults = await SessionStorage.GetAsync<string>(nameof(searchText));
-        searchText = stringResults.Success
+        stringResults = await SessionStorage.GetAsync<string>(nameof(_searchText));
+        _searchText = stringResults.Success
             ? stringResults.Value
             : "";
 
-        var boolResults = await SessionStorage.GetAsync<bool>(nameof(isSortedByNew));
-        isSortedByNew = boolResults.Success ? boolResults.Value : true;
+        var boolResults = await SessionStorage.GetAsync<bool>(nameof(_isSortedByNew));
+        
+        _isSortedByNew = !boolResults.Success || boolResults.Value;
     }
 
     private async Task SaveFilterState()
     {
-        await SessionStorage.SetAsync(nameof(selectedCategory), selectedCategory);
-        await SessionStorage.SetAsync(nameof(selectedStatus), selectedStatus);
-        await SessionStorage.SetAsync(nameof(searchText), searchText);
-        await SessionStorage.SetAsync(nameof(isSortedByNew), isSortedByNew);
+        await SessionStorage.SetAsync(nameof(_selectedCategory), _selectedCategory);
+        await SessionStorage.SetAsync(nameof(_selectedStatus), _selectedStatus);
+        await SessionStorage.SetAsync(nameof(_searchText), _searchText);
+        await SessionStorage.SetAsync(nameof(_isSortedByNew), _isSortedByNew);
     }
 
     private async Task FilterSuggestions()
     {
         var output = await SuggestionData.GetAllApprovedSuggestions();
 
-        if (selectedCategory != "All")
+        if (_selectedCategory != "All")
         {
-            output = output.Where(s => s.Category?.CategoryName == selectedCategory).ToList();
+            output = output.Where(s => s.Category?.CategoryName == _selectedCategory).ToList();
         }
 
-        if (selectedStatus != "All")
+        if (_selectedStatus != "All")
         {
-            output = output.Where(s => s.SuggestionStatus?.StatusName == selectedStatus).ToList();
+            output = output.Where(s => s.SuggestionStatus?.StatusName == _selectedStatus).ToList();
         }
 
-        if (string.IsNullOrWhiteSpace(searchText) == false)
+        if (string.IsNullOrWhiteSpace(_searchText) == false)
         {
             output = output.Where(
-                s => s.Suggestion.Contains(searchText, StringComparison.InvariantCultureIgnoreCase)
-                     || s.Description.Contains(searchText, StringComparison.InvariantCultureIgnoreCase)
+                s => s.Suggestion.Contains(_searchText, StringComparison.InvariantCultureIgnoreCase)
+                     || s.Description.Contains(_searchText, StringComparison.InvariantCultureIgnoreCase)
                 ).ToList();
         }
 
-        output = isSortedByNew
+        output = _isSortedByNew
             ? output.OrderByDescending(s => s.DateCreated)
                     .ToList()
             : output.OrderByDescending(s => s.UserVotes.Count)
                     .ThenByDescending(s => s.DateCreated)
                     .ToList();
 
-        suggestions = output;
+        _suggestions = output;
 
         await SaveFilterState();
     }
 
     private async Task OrderByNew(bool isNew)
     {
-        isSortedByNew = isNew;
+        _isSortedByNew = isNew;
         await FilterSuggestions();
     }
 
     private async Task OnSearchInput(string searchInput)
     {
-        searchText = searchInput;
+        _searchText = searchInput;
         await FilterSuggestions();
     }
 
     private async Task OnCategoryClick(string category = "All")
     {
-        selectedCategory = category;
+        _selectedCategory = category;
         await FilterSuggestions();
     }
 
     private async Task OnStatusClick(string status = "All")
     {
-        selectedStatus = status;
+        _selectedStatus = status;
         await FilterSuggestions();
     }
 

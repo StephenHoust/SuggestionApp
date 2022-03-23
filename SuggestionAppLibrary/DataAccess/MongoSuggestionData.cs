@@ -33,6 +33,20 @@ public class MongoSuggestionData : ISuggestionData
         return output;
     }
 
+    public async Task<List<SuggestionModel>> GetUserSuggestions(string userId)
+    {
+        var output = _cache.Get<List<SuggestionModel>>(userId);
+
+        if (output is not null) return output;
+        
+        var results = await _suggestions.FindAsync(s => s.Author.Id == userId);
+        output = results.ToList();
+
+        _cache.Set(userId, output, TimeSpan.FromMinutes(1));
+
+        return output;
+    }
+
     public async Task<List<SuggestionModel>> GetAllApprovedSuggestions()
     {
         var output = await GetAllSuggestions();
@@ -63,14 +77,16 @@ public class MongoSuggestionData : ISuggestionData
         var client = _db.Client;
 
         using var session = await client.StartSessionAsync();
-        
+
         session.StartTransaction();
 
         try
         {
             var db = client.GetDatabase(_db.DbName);
-            var suggestionsInTransaction = db.GetCollection<SuggestionModel>(_db.SuggestionCollectionName);
-            var suggestion = (await suggestionsInTransaction.FindAsync(s => s.Id == suggestionId)).First();
+            var suggestionsInTransaction =
+                db.GetCollection<SuggestionModel>(_db.SuggestionCollectionName);
+            var suggestion = (await suggestionsInTransaction.FindAsync(s => s.Id == suggestionId))
+                .First();
 
             var isUpvote = suggestion.UserVotes.Add(userId);
 
@@ -97,7 +113,7 @@ public class MongoSuggestionData : ISuggestionData
             await usersInTransaction.ReplaceOneAsync(u => u.Id == userId, user);
 
             await session.CommitTransactionAsync();
-            
+
             _cache.Remove(CacheName);
         }
         catch (Exception ex)
@@ -118,9 +134,10 @@ public class MongoSuggestionData : ISuggestionData
         try
         {
             var db = client.GetDatabase(_db.DbName);
-            var suggestionsInTransaction = db.GetCollection<SuggestionModel>(_db.SuggestionCollectionName);
+            var suggestionsInTransaction =
+                db.GetCollection<SuggestionModel>(_db.SuggestionCollectionName);
             await suggestionsInTransaction.InsertOneAsync(suggestion);
-            
+
             var usersInTransaction = db.GetCollection<UserModel>(_db.UserCollectionName);
             var user = await _userData.GetUser(suggestion.Author.Id);
             user.AuthoredSuggestions.Add(new BasicSuggestionModel(suggestion));

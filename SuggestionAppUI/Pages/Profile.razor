@@ -1,4 +1,7 @@
 ﻿@page "/Profile"
+@attribute [Authorize]
+
+@inject AuthenticationStateProvider AuthProvider
 @inject ISuggestionData SuggestionData
 @inject IUserData UserData
 @inject NavigationManager NavManager
@@ -14,7 +17,7 @@
 <div>
     <h2>My Account</h2>
     <p>
-        <a href="#">
+        <a href="MicrosoftIdentity/Account/EditProfile">
             Edit My Profile
         </a>
     </p>
@@ -178,8 +181,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-    //TODO - Replace with user lookup
-        _loggedInUser = await UserData.GetUserFromAuthentication("abc-123");
+        _loggedInUser = await AuthProvider.GetUserFromAuth(UserData);
 
         var results = await SuggestionData.GetUserSuggestions(_loggedInUser.Id);
 

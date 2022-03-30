@@ -1,7 +1,9 @@
 ﻿@page "/Details/{Id}"
 
+@inject AuthenticationStateProvider AuthProvider
 @inject ISuggestionData SuggestionData
 @inject NavigationManager NavManager
+@inject IUserData UserData
 
 <h1>Suggestion Details</h1>
 
@@ -11,7 +13,7 @@
         {
             <div>
                 <div>
-                    <div>
+                    <div @onclick="VoteUp">
                         <div>@GetUpvoteTopText()</div>
                         <span class="oi oi-caret-top"></span>
                         <div>@GetUpvoteBottomText()</div>
@@ -57,10 +59,12 @@
     public string Id { get; set; }
 
     private SuggestionModel _suggestion;
+    private UserModel _loggedInUser;
 
     protected override async Task OnInitializedAsync()
     {
         _suggestion = await SuggestionData.GetSuggestion(Id);
+        _loggedInUser = await AuthProvider.GetUserFromAuth(UserData);
     }
 
     private void ClosePage()
@@ -70,12 +74,38 @@
 
     private string GetUpvoteTopText()
     {
-        return _suggestion.UserVotes?.Count > 0 ? _suggestion.UserVotes.Count.ToString("00") : "Click To";
+        if (_suggestion.UserVotes?.Count > 0)
+            return _suggestion.UserVotes.Count.ToString("00");
+        else if (_suggestion.Author.Id == _loggedInUser?.Id)
+            return "Awaiting";
+        else
+            return "Click To";
     }
 
     private string GetUpvoteBottomText()
     {
         return _suggestion.UserVotes?.Count > 1 ? "Upvotes" : "Upvote";
+    }
+
+    private async Task VoteUp()
+    {
+        if (_loggedInUser is not null)
+        {
+            if (_suggestion.Author.Id == _loggedInUser.Id)
+            {
+                // Can't vote on your own suggestion
+                return;
+            }
+
+            if (_suggestion.UserVotes.Add(_loggedInUser.Id) == false)
+                _suggestion.UserVotes.Remove(_loggedInUser.Id);
+
+            await SuggestionData.UpvoteSuggestion(_suggestion.Id, _loggedInUser.Id);
+        }
+        else
+        {
+            NavManager.NavigateTo("/MicrosoftIdentity/Account/SignIn", true);
+        }
     }
 
 }

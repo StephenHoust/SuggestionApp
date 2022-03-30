@@ -1,17 +1,35 @@
-﻿namespace SuggestionAppUI;
+﻿using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
+
+namespace SuggestionAppUI;
 
 public static class RegisterServices
 {
     public static void ConfigureServices(this WebApplicationBuilder builder)
     {
-        builder.Services.AddRazorPages();
-        builder.Services.AddServerSideBlazor();
-        builder.Services.AddMemoryCache();
+        var registerServices = builder.Services;
+        
+        registerServices.AddRazorPages();
+        registerServices.AddServerSideBlazor().AddMicrosoftIdentityConsentHandler();
+        registerServices.AddMemoryCache();
+        registerServices.AddControllersWithViews().AddMicrosoftIdentityUI();
 
-        builder.Services.AddSingleton<IDbConnection, DbConnection>();
-        builder.Services.AddSingleton<ICategoryData, MongoCategoryData>();
-        builder.Services.AddSingleton<IStatusData, MongoStatusData>();
-        builder.Services.AddSingleton<ISuggestionData, MongoSuggestionData>();
-        builder.Services.AddSingleton<IUserData, MongoUserData>();
+        registerServices.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+                        .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAdB2C"));
+
+        registerServices.AddAuthorization(options =>
+        {
+            options.AddPolicy("Admin", policy =>
+            {
+                policy.RequireClaim("jobTitle", "Admin");
+            });
+        });
+
+        registerServices.AddSingleton<IDbConnection, DbConnection>();
+        registerServices.AddSingleton<ICategoryData, MongoCategoryData>();
+        registerServices.AddSingleton<IStatusData, MongoStatusData>();
+        registerServices.AddSingleton<ISuggestionData, MongoSuggestionData>();
+        registerServices.AddSingleton<IUserData, MongoUserData>();
     }
 }

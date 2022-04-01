@@ -40,11 +40,30 @@
                         <div class="suggestion-entry-text-title" @onclick="() => OpenDetails(s)">
                             @s.Suggestion
                         </div>
-                        <div>
-                            <div class="suggestion-entry-text-category" @onclick="() => OpenDetails(s)">
-                                @s.Category?.CategoryName
+                        @if (_archivingSuggestion is null || _archivingSuggestion.Id != s.Id)
+                        {
+                            <div class="suggestion-entry-bottom">
+                                <div class="suggestion-entry-text-category" @onclick="() => OpenDetails(s)">
+                                    @s.Category?.CategoryName
+                                </div>
+                                <AuthorizeView Policy="Admin">
+                                    <button @onclick="() => _archivingSuggestion = s" class="btn suggestion-entry-text-category btn-archive">
+                                        Archive
+                                    </button>
+                                </AuthorizeView>
                             </div>
-                        </div>
+                        }
+                        else
+                        {
+                            <div class="suggestion-entry-bottom">
+                                <button class="btn btn-archive btn-archive-confirm" @onclick="ArchiveSuggestion">
+                                    Confirm
+                                </button>
+                                <button class="btn btn-archive btn-archive-reject" @onclick="() => _archivingSuggestion = null">
+                                    Cancel
+                                </button>
+                            </div>
+                        }
                     </div>
                     <div class="suggestion-entry-status @GetSuggestionStatusClass(s)">
                         <div class="suggestion-entry-status-text">
@@ -90,6 +109,7 @@
     private List<SuggestionModel> _suggestions;
     private List<CategoryModel> _categories;
     private List<StatusModel> _statuses;
+    private SuggestionModel _archivingSuggestion;
 
     private string _selectedCategory = "All";
     private string _selectedStatus = "All";
@@ -307,7 +327,7 @@
         return suggestion.Author.Id == _loggedInUser?.Id ? "Awaiting" : "Click To";
     }
 
-    private string GetUpvoteBottomText(SuggestionModel suggestion)
+    private static string GetUpvoteBottomText(SuggestionModel suggestion)
     {
         return suggestion.UserVotes?.Count > 1 ? "Upvotes" : "Upvote";
     }
@@ -330,7 +350,7 @@
         return suggestion.UserVotes.Contains(_loggedInUser?.Id) ? "suggestion-entry-voted" : "suggestion-entry-not-voted";
     }
 
-    private string GetSuggestionStatusClass(SuggestionModel suggestion)
+    private static string GetSuggestionStatusClass(SuggestionModel suggestion)
     {
         if (suggestion?.SuggestionStatus is null)
         {
@@ -353,9 +373,18 @@
     {
         return category == _selectedCategory ? "selected-category" : "";
     }
-    
+
     private string GetSelectedStatus(string status = "All")
     {
         return status == _selectedStatus ? "selected-status" : "";
     }
+
+    private async Task ArchiveSuggestion()
+    {
+        _archivingSuggestion.Archived = true;
+        await SuggestionData.UpdateSuggestion(_archivingSuggestion);
+        _suggestions.Remove(_archivingSuggestion);
+        _archivingSuggestion = null;
+    }
+
 }

@@ -23,6 +23,49 @@
         <input class="form-control rounded-control" type="text" placeholder="Search" aria-label="Search Box"
                @oninput="(txt) => OnSearchInput((string)txt.Value)" />
     </div>
+    <div class="col-12 d-block d-md-none">
+        @if (_categories is not null && _showCategories)
+        {
+            <div class="categories">
+                <span class="text-uppercase fw-bold">Category</span>
+                <div class="@GetSelectedCategory()" @onclick="() => OnCategoryClick()">All</div>
+                @foreach (var c in _categories)
+                {
+                    <div class="@GetSelectedCategory(c.CategoryName)"
+                         @onclick="() => OnCategoryClick(c.CategoryName)">
+                        @c.CategoryName
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="categories" @onclick="() => _showCategories = true">
+                <span class="selected-category">@_selectedCategory</span>
+            </div>
+        }
+
+        @if (_statuses is not null && _showStatuses)
+        {
+            <div class="statuses">
+                <span class="text-uppercase fw-bold">Status</span>
+                <div class="@GetSelectedStatus()" @onclick="() => OnStatusClick()">All</div>
+                @foreach (var s in _statuses)
+                {
+                    <div class="@GetSelectedStatus(s.StatusName)"
+                         @onclick="() => OnStatusClick(s.StatusName)">
+                        @s.StatusName
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="statuses" @onclick="() => _showStatuses = true">
+                <span class="selected-status">@_selectedStatus</span>
+            </div>
+        }
+    </div>
 </div>
 
 <div class="row">
@@ -74,7 +117,7 @@
             </Virtualize>
         }
     </div>
-    <div class="col-md-4 col-xl-3">
+    <div class="col-md-4 col-xl-3 d-none d-md-block">
         @if (_categories is not null)
         {
             <div class="categories">
@@ -115,6 +158,8 @@
     private string _selectedStatus = "All";
     private string _searchText = "";
     private bool _isSortedByNew = true;
+    private bool _showCategories = false;
+    private bool _showStatuses = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -280,12 +325,14 @@
     private async Task OnCategoryClick(string category = "All")
     {
         _selectedCategory = category;
+        _showCategories = false;
         await FilterSuggestions();
     }
 
     private async Task OnStatusClick(string status = "All")
     {
         _selectedStatus = status;
+        _showStatuses = false;
         await FilterSuggestions();
     }
 
